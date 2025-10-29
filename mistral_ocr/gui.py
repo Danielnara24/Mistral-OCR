@@ -45,6 +45,13 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.title("Mistral OCR Processor")
         self.geometry("800x650")
 
+        # --- Style Configuration ---
+        self.style = ttk.Style(self)
+        self.style.map('Canceling.TButton',
+                       background=[('disabled', 'medium blue')],
+                       foreground=[('disabled', 'medium blue')])
+
+
         # --- Shared State ---
         self.log_queue = queue.Queue()
         self.cancel_event = threading.Event()
@@ -629,15 +636,34 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
     def cancel_processing(self):
         if self.processing_thread and self.processing_thread.is_alive():
-            # Disable cancel buttons and show "Canceling..."
-            self.cancel_button.config(state='disabled', text='Canceling...')
-            self.folder_cancel_button.config(state='disabled', text='Canceling...')
-            self.subfolder_cancel_button.config(state='disabled', text='Canceling...')
-            
-            # Set the event to signal the thread to stop
+            # Signal the thread to stop
             self.cancel_event.set()
 
-            # Immediately re-enable selection and settings
+            # --- Immediately update UI to show "canceling" state ---
+            active_button = None
+            if self.active_tab_index == 0:
+                if self.ind_timer_id:
+                    self.after_cancel(self.ind_timer_id)
+                    self.ind_timer_id = None
+                self.ind_elapsed_time_var.set("0.0s")
+                active_button = self.cancel_button
+            elif self.active_tab_index == 1:
+                if self.fld_timer_id:
+                    self.after_cancel(self.fld_timer_id)
+                    self.fld_timer_id = None
+                self.fld_elapsed_time_var.set("0.0s")
+                active_button = self.folder_cancel_button
+            elif self.active_tab_index == 2:
+                if self.sub_timer_id:
+                    self.after_cancel(self.sub_timer_id)
+                    self.sub_timer_id = None
+                self.sub_elapsed_time_var.set("0.0s")
+                active_button = self.subfolder_cancel_button
+            
+            if active_button:
+                active_button.config(text='Canceling...', style='Canceling.TButton', state='disabled')
+
+            # --- Immediately re-enable selection and settings ---
             self.select_button.config(state='normal')
             self.folder_select_button.config(state='normal')
             self.subfolder_select_button.config(state='normal')
@@ -669,13 +695,13 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                     self.notebook.tab(i, state="disabled")
         else:
             # --- Re-enable UI after processing/cancellation is complete ---
-            if active_tab_index == 0 and self.ind_timer_id:
+            if self.ind_timer_id:
                 self.after_cancel(self.ind_timer_id)
                 self.ind_timer_id = None
-            elif active_tab_index == 1 and self.fld_timer_id:
+            if self.fld_timer_id:
                 self.after_cancel(self.fld_timer_id)
                 self.fld_timer_id = None
-            elif active_tab_index == 2 and self.sub_timer_id:
+            if self.sub_timer_id:
                 self.after_cancel(self.sub_timer_id)
                 self.sub_timer_id = None
 
@@ -690,15 +716,15 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             # Re-enable all controls now that the thread is finished.
             self.select_button.config(state='normal')
             self.process_button.config(state='normal' if self.image_paths else 'disabled')
-            self.cancel_button.config(state='disabled', text='Cancel')
+            self.cancel_button.config(state='disabled', text='Cancel', style='TButton')
             
             self.folder_select_button.config(state='normal')
             self.folder_process_button.config(state='normal' if self.folder_image_paths else 'disabled')
-            self.folder_cancel_button.config(state='disabled', text='Cancel')
+            self.folder_cancel_button.config(state='disabled', text='Cancel', style='TButton')
 
             self.subfolder_select_button.config(state='normal')
             self.subfolder_process_button.config(state='normal' if self.subfolder_all_image_paths else 'disabled')
-            self.subfolder_cancel_button.config(state='disabled', text='Cancel')
+            self.subfolder_cancel_button.config(state='disabled', text='Cancel', style='TButton')
 
             self._set_widget_state_recursive(self.fld_settings_frame, 'normal')
             self._set_widget_state_recursive(self.sub_settings_frame, 'normal')
