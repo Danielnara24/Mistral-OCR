@@ -22,5 +22,8 @@ dependencies = [
     "tkinterdnd2"
 ]
 
+[project.urls]
+Homepage = "https://github.com/Danielnara24/Mistral-OCR"
+
 [project.gui-scripts]
 mistral-ocr = "mistral_ocr.gui:main"
