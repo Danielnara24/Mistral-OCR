@@ -198,103 +198,103 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.ind_progress_bar = self._create_progress_section(self.tab1, self.ind_elapsed_time_var)
 
     def create_tab2_widgets(self):
-        desc_label = ttk.Label(
-            self.tab2,
-            text="Process all images in a folder. Drag and drop a folder onto the window or use the button.\nOptionally, combine the OCR results into a single markdown file.",
-            wraplength=770,
-            justify=tk.LEFT
-        )
-        desc_label.pack(side='top', fill='x', pady=(5, 10), padx=7)
-        ttk.Separator(self.tab2).pack(fill='x', padx=5, pady=(0, 5))
+            desc_label = ttk.Label(
+                self.tab2,
+                text="Process all images in a folder. Drag and drop a folder onto the window or use the button.\nOptionally, combine the OCR results into a single markdown file.",
+                wraplength=770,
+                justify=tk.LEFT
+            )
+            desc_label.pack(side='top', fill='x', pady=(5, 10), padx=7)
+            ttk.Separator(self.tab2).pack(fill='x', padx=5, pady=(0, 5))
 
-        controls_frame = ttk.Frame(self.tab2)
-        controls_frame.pack(side='top', fill='x', pady=5, padx=5)
-        
-        self.folder_select_button = ttk.Button(controls_frame, text="Select Folder", command=self.select_folder)
-        self.folder_select_button.pack(side='left', padx=5)
+            controls_frame = ttk.Frame(self.tab2)
+            controls_frame.pack(side='top', fill='x', pady=5, padx=5)
+            
+            self.folder_select_button = ttk.Button(controls_frame, text="Select Folder", command=self.select_folder)
+            self.folder_select_button.pack(side='left', padx=5)
 
-        self.folder_process_button = ttk.Button(controls_frame, text="Process Images", command=self.start_folder_processing, state='disabled')
-        self.folder_process_button.pack(side='left', padx=5)
+            self.folder_process_button = ttk.Button(controls_frame, text="Process Images", command=self.start_folder_processing, state='disabled')
+            self.folder_process_button.pack(side='left', padx=5)
 
-        self.folder_cancel_button = ttk.Button(controls_frame, text="Cancel", command=self.cancel_processing, state='disabled')
-        self.folder_cancel_button.pack(side='left', padx=5)
-        
-        folder_info_frame = ttk.Frame(self.tab2)
-        folder_info_frame.pack(fill='x', padx=5, pady=(5, 0))
-        ttk.Label(folder_info_frame, text="Selected Folder:").pack(side='left')
-        self.folder_path_label = ttk.Label(folder_info_frame, text="None", font=("Helvetica", 9, "italic"), foreground="gray")
-        self.folder_path_label.pack(side='left', padx=5)
+            self.folder_cancel_button = ttk.Button(controls_frame, text="Cancel", command=self.cancel_processing, state='disabled')
+            self.folder_cancel_button.pack(side='left', padx=5)
+            
+            folder_info_frame = ttk.Frame(self.tab2)
+            folder_info_frame.pack(fill='x', padx=5, pady=(5, 0))
+            ttk.Label(folder_info_frame, text="Selected Folder:").pack(side='left')
+            self.folder_path_label = ttk.Label(folder_info_frame, text="None", font=("Helvetica", 9, "italic"), foreground="gray")
+            self.folder_path_label.pack(side='left', padx=5)
 
-        settings_frame = ttk.LabelFrame(self.tab2, text="Settings", padding=10)
-        settings_frame.pack(fill='x', padx=5, pady=10)
-        
-        combine_check = ttk.Checkbutton(
-            settings_frame, text="Create a combined markdown file", variable=self.combine_md_var, command=self.toggle_folder_sort_options
-        )
-        combine_check.grid(row=0, column=0, sticky='w')
+            self.fld_settings_frame = ttk.LabelFrame(self.tab2, text="Settings", padding=10)
+            self.fld_settings_frame.pack(fill='x', padx=5, pady=10)
+            
+            combine_check = ttk.Checkbutton(
+                self.fld_settings_frame, text="Create a combined markdown file", variable=self.combine_md_var, command=self.toggle_folder_sort_options
+            )
+            combine_check.grid(row=0, column=0, sticky='w')
 
-        self.sort_options_frame = ttk.Frame(settings_frame)
-        self.sort_options_frame.grid(row=1, column=0, columnspan=2, sticky='w', padx=20, pady=5)
+            self.sort_options_frame = ttk.Frame(self.fld_settings_frame)
+            self.sort_options_frame.grid(row=1, column=0, columnspan=2, sticky='w', padx=20, pady=5)
 
-        ttk.Radiobutton(self.sort_options_frame, text="Natural Sort (e.g., img1, img2, img10)", variable=self.sort_method_var, value="natural").pack(anchor='w')
-        ttk.Radiobutton(self.sort_options_frame, text="Reverse Natural Sort", variable=self.sort_method_var, value="reverse_natural").pack(anchor='w')
-        ttk.Radiobutton(self.sort_options_frame, text="Date Modified (Newest to Oldest)", variable=self.sort_method_var, value="mtime_desc").pack(anchor='w')
-        ttk.Radiobutton(self.sort_options_frame, text="Date Modified (Oldest to Newest)", variable=self.sort_method_var, value="mtime_asc").pack(anchor='w')
+            ttk.Radiobutton(self.sort_options_frame, text="Natural Sort (e.g., img1, img2, img10)", variable=self.sort_method_var, value="natural").pack(anchor='w')
+            ttk.Radiobutton(self.sort_options_frame, text="Reverse Natural Sort", variable=self.sort_method_var, value="reverse_natural").pack(anchor='w')
+            ttk.Radiobutton(self.sort_options_frame, text="Date Modified (Newest to Oldest)", variable=self.sort_method_var, value="mtime_desc").pack(anchor='w')
+            ttk.Radiobutton(self.sort_options_frame, text="Date Modified (Oldest to Newest)", variable=self.sort_method_var, value="mtime_asc").pack(anchor='w')
 
-        self.fld_progress_bar = self._create_progress_section(self.tab2, self.fld_elapsed_time_var)
-        self.toggle_folder_sort_options()
+            self.fld_progress_bar = self._create_progress_section(self.tab2, self.fld_elapsed_time_var)
+            self.toggle_folder_sort_options()
 
     def create_tab3_widgets(self):
-        desc_label = ttk.Label(
-            self.tab3,
-            text="Process images in immediate subfolders. Drag and drop a parent folder or use the button.\nOptionally, combine results per subfolder and create a final compilation.",
-            wraplength=770,
-            justify=tk.LEFT
-        )
-        desc_label.pack(side='top', fill='x', pady=(5, 10), padx=7)
-        ttk.Separator(self.tab3).pack(fill='x', padx=5, pady=(0, 5))
+            desc_label = ttk.Label(
+                self.tab3,
+                text="Process images in immediate subfolders. Drag and drop a parent folder or use the button.\nOptionally, combine results per subfolder and create a final compilation.",
+                wraplength=770,
+                justify=tk.LEFT
+            )
+            desc_label.pack(side='top', fill='x', pady=(5, 10), padx=7)
+            ttk.Separator(self.tab3).pack(fill='x', padx=5, pady=(0, 5))
 
-        controls_frame = ttk.Frame(self.tab3)
-        controls_frame.pack(side='top', fill='x', pady=5, padx=5)
-        
-        self.subfolder_select_button = ttk.Button(controls_frame, text="Select Parent Folder", command=self.select_parent_folder)
-        self.subfolder_select_button.pack(side='left', padx=5)
+            controls_frame = ttk.Frame(self.tab3)
+            controls_frame.pack(side='top', fill='x', pady=5, padx=5)
+            
+            self.subfolder_select_button = ttk.Button(controls_frame, text="Select Parent Folder", command=self.select_parent_folder)
+            self.subfolder_select_button.pack(side='left', padx=5)
 
-        self.subfolder_process_button = ttk.Button(controls_frame, text="Process Subfolders", command=self.start_subfolder_processing, state='disabled')
-        self.subfolder_process_button.pack(side='left', padx=5)
+            self.subfolder_process_button = ttk.Button(controls_frame, text="Process Subfolders", command=self.start_subfolder_processing, state='disabled')
+            self.subfolder_process_button.pack(side='left', padx=5)
 
-        self.subfolder_cancel_button = ttk.Button(controls_frame, text="Cancel", command=self.cancel_processing, state='disabled')
-        self.subfolder_cancel_button.pack(side='left', padx=5)
+            self.subfolder_cancel_button = ttk.Button(controls_frame, text="Cancel", command=self.cancel_processing, state='disabled')
+            self.subfolder_cancel_button.pack(side='left', padx=5)
 
-        folder_info_frame = ttk.Frame(self.tab3)
-        folder_info_frame.pack(fill='x', padx=5, pady=(5, 0))
-        ttk.Label(folder_info_frame, text="Selected Parent Folder:").pack(side='left')
-        self.subfolder_path_label = ttk.Label(folder_info_frame, text="None", font=("Helvetica", 9, "italic"), foreground="gray")
-        self.subfolder_path_label.pack(side='left', padx=5)
+            folder_info_frame = ttk.Frame(self.tab3)
+            folder_info_frame.pack(fill='x', padx=5, pady=(5, 0))
+            ttk.Label(folder_info_frame, text="Selected Parent Folder:").pack(side='left')
+            self.subfolder_path_label = ttk.Label(folder_info_frame, text="None", font=("Helvetica", 9, "italic"), foreground="gray")
+            self.subfolder_path_label.pack(side='left', padx=5)
 
-        settings_frame = ttk.LabelFrame(self.tab3, text="Settings", padding=10)
-        settings_frame.pack(fill='x', padx=5, pady=10)
-        
-        combine_per_sub_check = ttk.Checkbutton(
-            settings_frame, text="Create a combined markdown file for each subfolder", variable=self.combine_per_subfolder_var, command=self.toggle_subfolder_options
-        )
-        combine_per_sub_check.grid(row=0, column=0, sticky='w')
+            self.sub_settings_frame = ttk.LabelFrame(self.tab3, text="Settings", padding=10)
+            self.sub_settings_frame.pack(fill='x', padx=5, pady=10)
+            
+            combine_per_sub_check = ttk.Checkbutton(
+                self.sub_settings_frame, text="Create a combined markdown file for each subfolder", variable=self.combine_per_subfolder_var, command=self.toggle_subfolder_options
+            )
+            combine_per_sub_check.grid(row=0, column=0, sticky='w')
 
-        self.sub_sort_options_frame = ttk.Frame(settings_frame)
-        self.sub_sort_options_frame.grid(row=1, column=0, columnspan=2, sticky='w', padx=20, pady=5)
-        
-        ttk.Radiobutton(self.sub_sort_options_frame, text="Natural Sort (e.g., img1, img2, img10)", variable=self.sub_sort_method_var, value="natural").pack(anchor='w')
-        ttk.Radiobutton(self.sub_sort_options_frame, text="Reverse Natural Sort", variable=self.sub_sort_method_var, value="reverse_natural").pack(anchor='w')
-        ttk.Radiobutton(self.sub_sort_options_frame, text="Date Modified (Newest to Oldest)", variable=self.sub_sort_method_var, value="mtime_desc").pack(anchor='w')
-        ttk.Radiobutton(self.sub_sort_options_frame, text="Date Modified (Oldest to Newest)", variable=self.sub_sort_method_var, value="mtime_asc").pack(anchor='w')
-        
-        self.combine_all_check = ttk.Checkbutton(
-            settings_frame, text="Create a combined markdown file of all subfolders", variable=self.combine_all_subfolders_var
-        )
-        self.combine_all_check.grid(row=2, column=0, sticky='w', pady=(5,0))
+            self.sub_sort_options_frame = ttk.Frame(self.sub_settings_frame)
+            self.sub_sort_options_frame.grid(row=1, column=0, columnspan=2, sticky='w', padx=20, pady=5)
+            
+            ttk.Radiobutton(self.sub_sort_options_frame, text="Natural Sort (e.g., img1, img2, img10)", variable=self.sub_sort_method_var, value="natural").pack(anchor='w')
+            ttk.Radiobutton(self.sub_sort_options_frame, text="Reverse Natural Sort", variable=self.sub_sort_method_var, value="reverse_natural").pack(anchor='w')
+            ttk.Radiobutton(self.sub_sort_options_frame, text="Date Modified (Newest to Oldest)", variable=self.sub_sort_method_var, value="mtime_desc").pack(anchor='w')
+            ttk.Radiobutton(self.sub_sort_options_frame, text="Date Modified (Oldest to Newest)", variable=self.sub_sort_method_var, value="mtime_asc").pack(anchor='w')
+            
+            self.combine_all_check = ttk.Checkbutton(
+                self.sub_settings_frame, text="Create a combined markdown file of all subfolders", variable=self.combine_all_subfolders_var
+            )
+            self.combine_all_check.grid(row=2, column=0, sticky='w', pady=(5,0))
 
-        self.sub_progress_bar = self._create_progress_section(self.tab3, self.sub_elapsed_time_var)
-        self.toggle_subfolder_options()
+            self.sub_progress_bar = self._create_progress_section(self.tab3, self.sub_elapsed_time_var)
+            self.toggle_subfolder_options()
 
     def setup_drag_and_drop(self):
         self.drop_target_register(DND_FILES)
@@ -615,54 +615,77 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self.cancel_event.set()
 
     def set_ui_state(self, is_processing, active_tab_index=0):
-        if is_processing:
-            self.select_button.config(state='disabled')
-            self.process_button.config(state='disabled')
-            self.folder_select_button.config(state='disabled')
-            self.folder_process_button.config(state='disabled')
-            self.subfolder_select_button.config(state='disabled')
-            self.subfolder_process_button.config(state='disabled')
-            
-            if active_tab_index == 0: self.cancel_button.config(state='normal', text='Cancel')
-            elif active_tab_index == 1: self.folder_cancel_button.config(state='normal', text='Cancel')
-            elif active_tab_index == 2: self.subfolder_cancel_button.config(state='normal', text='Cancel')
+            def _set_children_state_recursive(parent_widget, state):
+                """Recursively sets the state of all child widgets."""
+                for child in parent_widget.winfo_children():
+                    try:
+                        # This works for most widgets (buttons, checkbuttons, etc.).
+                        child.configure(state=state)
+                    except tk.TclError:
+                        # If it fails, it might be a container like a Frame.
+                        # Recurse into it to affect its children.
+                        _set_children_state_recursive(child, state)
 
-            for i in range(len(self.notebook.tabs())):
-                if i != active_tab_index:
-                    self.notebook.tab(i, state="disabled")
-        else:
-            if active_tab_index == 0 and self.ind_timer_id:
-                self.after_cancel(self.ind_timer_id)
-                self.ind_timer_id = None
-            elif active_tab_index == 1 and self.fld_timer_id:
-                self.after_cancel(self.fld_timer_id)
-                self.fld_timer_id = None
-            elif active_tab_index == 2 and self.sub_timer_id:
-                self.after_cancel(self.sub_timer_id)
-                self.sub_timer_id = None
+            if is_processing:
+                self.select_button.config(state='disabled')
+                self.process_button.config(state='disabled')
+                self.folder_select_button.config(state='disabled')
+                self.folder_process_button.config(state='disabled')
+                self.subfolder_select_button.config(state='disabled')
+                self.subfolder_process_button.config(state='disabled')
+                
+                # Disable settings frames
+                _set_children_state_recursive(self.fld_settings_frame, 'disabled')
+                _set_children_state_recursive(self.sub_settings_frame, 'disabled')
+                
+                if active_tab_index == 0: self.cancel_button.config(state='normal', text='Cancel')
+                elif active_tab_index == 1: self.folder_cancel_button.config(state='normal', text='Cancel')
+                elif active_tab_index == 2: self.subfolder_cancel_button.config(state='normal', text='Cancel')
 
-            if self.cancel_event.is_set():
-                if active_tab_index == 0:
-                    self.ind_progress_bar.setup_grid(len(self.ind_progress_bar.square_ids))
-                elif active_tab_index == 1:
-                    self.fld_progress_bar.setup_grid(len(self.fld_progress_bar.square_ids))
-                elif active_tab_index == 2:
-                    self.sub_progress_bar.setup_grid(len(self.sub_progress_bar.square_ids))
+                for i in range(len(self.notebook.tabs())):
+                    if i != active_tab_index:
+                        self.notebook.tab(i, state="disabled")
+            else:
+                if active_tab_index == 0 and self.ind_timer_id:
+                    self.after_cancel(self.ind_timer_id)
+                    self.ind_timer_id = None
+                elif active_tab_index == 1 and self.fld_timer_id:
+                    self.after_cancel(self.fld_timer_id)
+                    self.fld_timer_id = None
+                elif active_tab_index == 2 and self.sub_timer_id:
+                    self.after_cancel(self.sub_timer_id)
+                    self.sub_timer_id = None
 
-            self.select_button.config(state='normal')
-            self.process_button.config(state='normal' if self.image_paths else 'disabled')
-            self.cancel_button.config(state='disabled', text='Cancel')
-            
-            self.folder_select_button.config(state='normal')
-            self.folder_process_button.config(state='normal' if self.folder_image_paths else 'disabled')
-            self.folder_cancel_button.config(state='disabled', text='Cancel')
+                if self.cancel_event.is_set():
+                    if active_tab_index == 0:
+                        self.ind_progress_bar.setup_grid(len(self.ind_progress_bar.square_ids))
+                    elif active_tab_index == 1:
+                        self.fld_progress_bar.setup_grid(len(self.fld_progress_bar.square_ids))
+                    elif active_tab_index == 2:
+                        self.sub_progress_bar.setup_grid(len(self.sub_progress_bar.square_ids))
 
-            self.subfolder_select_button.config(state='normal')
-            self.subfolder_process_button.config(state='normal' if self.subfolder_all_image_paths else 'disabled')
-            self.subfolder_cancel_button.config(state='disabled', text='Cancel')
+                self.select_button.config(state='normal')
+                self.process_button.config(state='normal' if self.image_paths else 'disabled')
+                self.cancel_button.config(state='disabled', text='Cancel')
+                
+                self.folder_select_button.config(state='normal')
+                self.folder_process_button.config(state='normal' if self.folder_image_paths else 'disabled')
+                self.folder_cancel_button.config(state='disabled', text='Cancel')
 
-            for i in range(len(self.notebook.tabs())):
-                self.notebook.tab(i, state="normal")
+                self.subfolder_select_button.config(state='normal')
+                self.subfolder_process_button.config(state='normal' if self.subfolder_all_image_paths else 'disabled')
+                self.subfolder_cancel_button.config(state='disabled', text='Cancel')
+
+                # Re-enable settings frames
+                _set_children_state_recursive(self.fld_settings_frame, 'normal')
+                _set_children_state_recursive(self.sub_settings_frame, 'normal')
+
+                # After re-enabling, restore the correct dependent state of options
+                self.toggle_folder_sort_options()
+                self.toggle_subfolder_options()
+
+                for i in range(len(self.notebook.tabs())):
+                    self.notebook.tab(i, state="normal")
 
     def process_log_queue(self):
         try:
