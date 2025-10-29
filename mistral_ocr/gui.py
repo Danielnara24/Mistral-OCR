@@ -296,6 +296,17 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.sub_progress_bar = self._create_progress_section(self.tab3, self.sub_elapsed_time_var)
         self.toggle_subfolder_options()
 
+    def _set_widget_state_recursive(self, parent_widget, state):
+            """Recursively sets the state of all child widgets."""
+            for child in parent_widget.winfo_children():
+                try:
+                    # This works for most ttk widgets (buttons, checkbuttons, etc.).
+                    child.configure(state=state)
+                except tk.TclError:
+                    # If it fails, it might be a container like a Frame.
+                    # Recurse into it to affect its children.
+                    self._set_widget_state_recursive(child, state)
+
     def setup_drag_and_drop(self):
         self.drop_target_register(DND_FILES)
         self.dnd_bind('<<Drop>>', self.handle_drop)
@@ -349,7 +360,11 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.file_listbox.delete(0, tk.END)
         for path in self.image_paths:
             self.file_listbox.insert(tk.END, os.path.basename(path))
-        self.process_button.config(state='normal')
+        
+        # Only enable the process button if nothing is currently processing/canceling
+        if not (self.processing_thread and self.processing_thread.is_alive()):
+            self.process_button.config(state='normal')
+            
         self.ind_progress_bar.setup_grid(len(self.image_paths))
 
     def select_files(self):
@@ -406,7 +421,9 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.folder_path_label.config(text=self.folder_path, foreground="black")
         
         if self.folder_image_paths:
-            self.folder_process_button.config(state='normal')
+            # Only enable the process button if nothing is currently processing/canceling
+            if not (self.processing_thread and self.processing_thread.is_alive()):
+                self.folder_process_button.config(state='normal')
         else:
             self.folder_process_button.config(state='disabled')
         self.fld_progress_bar.setup_grid(len(self.folder_image_paths))
@@ -517,7 +534,9 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.subfolder_path_label.config(text=self.subfolders_parent_path, foreground="black")
 
         if self.subfolder_all_image_paths:
-            self.subfolder_process_button.config(state='normal')
+            # Only enable the process button if nothing is currently processing/canceling
+            if not (self.processing_thread and self.processing_thread.is_alive()):
+                self.subfolder_process_button.config(state='normal')
         else:
             self.subfolder_process_button.config(state='disabled')
         
@@ -609,24 +628,27 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
     def cancel_processing(self):
         if self.processing_thread and self.processing_thread.is_alive():
+            # Disable cancel buttons and show "Canceling..."
             self.cancel_button.config(state='disabled', text='Canceling...')
             self.folder_cancel_button.config(state='disabled', text='Canceling...')
             self.subfolder_cancel_button.config(state='disabled', text='Canceling...')
+            
+            # Set the event to signal the thread to stop
             self.cancel_event.set()
 
-    def set_ui_state(self, is_processing, active_tab_index=0):
-        def _set_children_state_recursive(parent_widget, state):
-            """Recursively sets the state of all child widgets."""
-            for child in parent_widget.winfo_children():
-                try:
-                    # This works for most widgets (buttons, checkbuttons, etc.).
-                    child.configure(state=state)
-                except tk.TclError:
-                    # If it fails, it might be a container like a Frame.
-                    # Recurse into it to affect its children.
-                    _set_children_state_recursive(child, state)
+            # Immediately re-enable selection and settings
+            self.select_button.config(state='normal')
+            self.folder_select_button.config(state='normal')
+            self.subfolder_select_button.config(state='normal')
 
+            self._set_widget_state_recursive(self.fld_settings_frame, 'normal')
+            self._set_widget_state_recursive(self.sub_settings_frame, 'normal')
+            self.toggle_folder_sort_options()
+            self.toggle_subfolder_options()
+
+    def set_ui_state(self, is_processing, active_tab_index=0):
         if is_processing:
+            # --- Disable UI for processing ---
             self.select_button.config(state='disabled')
             self.process_button.config(state='disabled')
             self.folder_select_button.config(state='disabled')
@@ -634,9 +656,8 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self.subfolder_select_button.config(state='disabled')
             self.subfolder_process_button.config(state='disabled')
             
-            # Disable settings frames
-            _set_children_state_recursive(self.fld_settings_frame, 'disabled')
-            _set_children_state_recursive(self.sub_settings_frame, 'disabled')
+            self._set_widget_state_recursive(self.fld_settings_frame, 'disabled')
+            self._set_widget_state_recursive(self.sub_settings_frame, 'disabled')
             
             if active_tab_index == 0: self.cancel_button.config(state='normal', text='Cancel')
             elif active_tab_index == 1: self.folder_cancel_button.config(state='normal', text='Cancel')
@@ -646,6 +667,7 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                 if i != active_tab_index:
                     self.notebook.tab(i, state="disabled")
         else:
+            # --- Re-enable UI after processing/cancellation is complete ---
             if active_tab_index == 0 and self.ind_timer_id:
                 self.after_cancel(self.ind_timer_id)
                 self.ind_timer_id = None
@@ -664,6 +686,7 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                 elif active_tab_index == 2:
                     self.sub_progress_bar.setup_grid(len(self.sub_progress_bar.square_ids))
 
+            # Re-enable all controls now that the thread is finished.
             self.select_button.config(state='normal')
             self.process_button.config(state='normal' if self.image_paths else 'disabled')
             self.cancel_button.config(state='disabled', text='Cancel')
@@ -676,11 +699,8 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self.subfolder_process_button.config(state='normal' if self.subfolder_all_image_paths else 'disabled')
             self.subfolder_cancel_button.config(state='disabled', text='Cancel')
 
-            # Re-enable settings frames
-            _set_children_state_recursive(self.fld_settings_frame, 'normal')
-            _set_children_state_recursive(self.sub_settings_frame, 'normal')
-
-            # After re-enabling, restore the correct dependent state of options
+            self._set_widget_state_recursive(self.fld_settings_frame, 'normal')
+            self._set_widget_state_recursive(self.sub_settings_frame, 'normal')
             self.toggle_folder_sort_options()
             self.toggle_subfolder_options()
 
