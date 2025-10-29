@@ -25,7 +25,17 @@ A user-friendly desktop application, built with Python and Tkinter, to perform O
 
 ## Installation
 
-You can install the package directly from the source code.
+The recommended way to install the application is using pip:
+
+```bash
+pip install mistral-ocr-gui
+```
+
+This command will download the application and automatically install all required dependencies.
+
+### Installation from Source (for Developers)
+
+If you want to contribute to the project or install the latest development version, you can install it from the source code:
 
 1.  **Clone the repository:**
     ```bash
@@ -33,12 +43,11 @@ You can install the package directly from the source code.
     cd Mistral-OCR
     ```
 
-2.  **Install the package using pip:**
-    This command will install the application and all its dependencies (`mistralai`, `tkinterdnd2`).
+2.  **Install in editable mode:**
+    This command will install the application and its dependencies. The `-e` flag allows you to make changes to the source code and have them take effect immediately.
     ```bash
-    pip install .
+    pip install -e .
     ```
-    *(For development, you can use `pip install -e .` to install in editable mode.)*
 
 ## Configuration: Setting the API Key
 
