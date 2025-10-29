@@ -312,7 +312,8 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.dnd_bind('<<Drop>>', self.handle_drop)
 
     def handle_drop(self, event):
-        if self.processing_thread and self.processing_thread.is_alive():
+        # Allow drop if not processing, OR if we are in the "canceling" state.
+        if self.processing_thread and self.processing_thread.is_alive() and not self.cancel_event.is_set():
             return
 
         try:
