@@ -58,6 +58,7 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.executor = None
         self.processing_thread = None
         self.active_tab_index = 0
+        self.status_var = tk.StringVar(value="Ready")
 
         # --- Individual Images State ---
         self.image_paths = []
@@ -116,6 +117,15 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             sys.exit(1)
             
     def create_widgets(self):
+        # --- Status Bar ---
+        # Pack this FIRST, so it reserves its space at the bottom.
+        status_bar_frame = ttk.Frame(self, relief=tk.SOLID, padding=(8, 4), borderwidth=0)
+        status_bar_frame.pack(side=tk.BOTTOM, fill=tk.X)
+        status_label = ttk.Label(status_bar_frame, textvariable=self.status_var, anchor='w', font=("Terminal", 10))
+        status_label.pack(fill=tk.X)
+
+        # --- Main Content ---
+        # Now, pack the notebook to fill the REMAINING space.
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(expand=True, fill='both', padx=10, pady=10)
 
@@ -374,6 +384,7 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self.process_button.config(state='normal')
             
         self.ind_progress_bar.setup_grid(len(self.image_paths))
+        self.status_var.set(f"{len(self.image_paths)} file(s) loaded.")
 
     def select_files(self):
         file_types = [("Image files", " ".join([f"*{ext}" for ext in SUPPORTED_IMAGE_EXTENSIONS])), ("All files", "*.*")]
@@ -429,10 +440,12 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.folder_path_label.config(text=self.folder_path, foreground="black")
         
         if self.folder_image_paths:
+            self.status_var.set(f"Folder loaded. Found {len(self.folder_image_paths)} image(s).")
             # Only enable the process button if nothing is currently processing/canceling
             if not (self.processing_thread and self.processing_thread.is_alive()):
                 self.folder_process_button.config(state='normal')
         else:
+            self.status_var.set("Folder loaded. Found 0 images.")
             self.folder_process_button.config(state='disabled')
         self.fld_progress_bar.setup_grid(len(self.folder_image_paths))
 
@@ -542,10 +555,12 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.subfolder_path_label.config(text=self.subfolders_parent_path, foreground="black")
 
         if self.subfolder_all_image_paths:
+            self.status_var.set(f"Parent folder loaded. Found {len(self.subfolder_all_image_paths)} image(s) in {len(self.subfolders_to_process)} subfolder(s).")
             # Only enable the process button if nothing is currently processing/canceling
             if not (self.processing_thread and self.processing_thread.is_alive()):
                 self.subfolder_process_button.config(state='normal')
         else:
+            self.status_var.set("Parent folder loaded. Found 0 images.")
             self.subfolder_process_button.config(state='disabled')
         
         self.sub_progress_bar.setup_grid(len(self.subfolder_all_image_paths))
@@ -636,6 +651,7 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
     def cancel_processing(self):
         if self.processing_thread and self.processing_thread.is_alive():
+            self.status_var.set("Cancelling...")
             # Signal the thread to stop
             self.cancel_event.set()
 
@@ -675,6 +691,7 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
     def set_ui_state(self, is_processing, active_tab_index=0):
         if is_processing:
+            self.status_var.set("Processing Files...")
             # --- Disable UI for processing ---
             self.select_button.config(state='disabled')
             self.process_button.config(state='disabled')
@@ -706,12 +723,15 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                 self.sub_timer_id = None
 
             if self.cancel_event.is_set():
+                self.status_var.set("Process Canceled")
                 if active_tab_index == 0:
                     self.ind_progress_bar.setup_grid(len(self.ind_progress_bar.square_ids))
                 elif active_tab_index == 1:
                     self.fld_progress_bar.setup_grid(len(self.fld_progress_bar.square_ids))
                 elif active_tab_index == 2:
                     self.sub_progress_bar.setup_grid(len(self.sub_progress_bar.square_ids))
+            else:
+                self.status_var.set("Files Processed")
 
             # Re-enable all controls now that the thread is finished.
             self.select_button.config(state='normal')
