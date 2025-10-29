@@ -1,5 +1,7 @@
 # Mistral OCR GUI Processor
 
+[![PyPI Version](https://img.shields.io/pypi/v/mistral-ocr-gui)](https://pypi.org/project/mistral-ocr-gui/)
+
 A user-friendly desktop application, built with Python and Tkinter, to perform Optical Character Recognition (OCR) on images using the powerful Mistral AI API. The tool provides a simple interface to process individual images, entire folders, or nested subfolders, and can combine the extracted text into organized markdown files.
 
 ## Features
