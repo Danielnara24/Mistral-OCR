@@ -613,7 +613,7 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                     if not md_files: continue
                     sub_name = os.path.basename(sub_path)
                     output_filename = f"Combined_OCR_{sub_name}.md"
-                    output_path = os.path.join(sub_path, output_filename)
+                    output_path = os.path.join(self.subfolders_parent_path, output_filename)
                     self._combine_markdown_files(md_files, output_path, self.sub_sort_method_var.get())
                     subfolder_combined_mds.append(output_path)
             
