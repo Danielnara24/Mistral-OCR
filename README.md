@@ -33,7 +33,7 @@ pip install mistral-ocr-gui
 
 This command will download the application and automatically install all required dependencies.
 
-### Installation from Source (for Developers)
+### Installation from Source
 
 If you want to contribute to the project or install the latest development version, you can install it from the source code:
 

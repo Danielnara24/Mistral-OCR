@@ -4,7 +4,6 @@ Main GUI application for Mistral OCR processing.
 Integrates core logic with a Tkinter interface.
 """
 
-
 import os
 import sys
 import tkinter as tk
@@ -89,6 +88,7 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.sub_start_time = 0
         self.sub_timer_id = None
         self.sub_elapsed_time_var = tk.StringVar(value="0.0s")
+        self.sub_recursive_var = tk.BooleanVar(value=False)
         self.combine_per_subfolder_var = tk.BooleanVar(value=False)
         self.combine_all_subfolders_var = tk.BooleanVar(value=False)
         self.sub_sort_method_var = tk.StringVar(value="natural")
@@ -265,7 +265,7 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
     def create_tab3_widgets(self):
         desc_label = ttk.Label(
             self.tab3,
-            text="Process images in immediate subfolders. Drag and drop a parent folder or use the button.\nOptionally, combine results per subfolder and create a final compilation.",
+            text="Process images in subfolders. Drag and drop a parent folder or use the button.\nUse the 'Recursive' option to process all subfolders at any depth. Optionally, combine results per subfolder and create a final compilation.",
             wraplength=770,
             justify=tk.LEFT
         )
@@ -293,13 +293,18 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.sub_settings_frame = ttk.LabelFrame(self.tab3, text="Settings", padding=10)
         self.sub_settings_frame.pack(fill='x', padx=5, pady=10)
         
+        recursive_check = ttk.Checkbutton(
+            self.sub_settings_frame, text="Recursive (process all nested subfolders)", variable=self.sub_recursive_var, command=self.update_subfolder_view_if_path_exists
+        )
+        recursive_check.grid(row=0, column=0, sticky='w', pady=(0, 5))
+
         combine_per_sub_check = ttk.Checkbutton(
             self.sub_settings_frame, text="Create a combined markdown file for each subfolder", variable=self.combine_per_subfolder_var, command=self.toggle_subfolder_options
         )
-        combine_per_sub_check.grid(row=0, column=0, sticky='w')
+        combine_per_sub_check.grid(row=1, column=0, sticky='w')
 
         self.sub_sort_options_frame = ttk.Frame(self.sub_settings_frame)
-        self.sub_sort_options_frame.grid(row=1, column=0, columnspan=2, sticky='w', padx=20, pady=5)
+        self.sub_sort_options_frame.grid(row=2, column=0, columnspan=2, sticky='w', padx=20, pady=5)
         
         ttk.Radiobutton(self.sub_sort_options_frame, text="Natural Sort (e.g., img1, img2, img10)", variable=self.sub_sort_method_var, value="natural").pack(anchor='w')
         ttk.Radiobutton(self.sub_sort_options_frame, text="Reverse Natural Sort", variable=self.sub_sort_method_var, value="reverse_natural").pack(anchor='w')
@@ -309,7 +314,7 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.combine_all_check = ttk.Checkbutton(
             self.sub_settings_frame, text="Create a combined markdown file of all subfolders", variable=self.combine_all_subfolders_var
         )
-        self.combine_all_check.grid(row=2, column=0, sticky='w', pady=(5,0))
+        self.combine_all_check.grid(row=3, column=0, sticky='w', pady=(5,0))
 
         self.sub_progress_bar = self._create_progress_section(self.tab3, self.sub_elapsed_time_var)
         self.toggle_subfolder_options()
@@ -534,20 +539,43 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.fld_elapsed_time_var.set(f"{elapsed:.1f}s")
         self.fld_timer_id = self.after(100, self.update_folder_stopwatch)
     
+    def update_subfolder_view_if_path_exists(self):
+        if self.subfolders_parent_path:
+            self._load_parent_folder(self.subfolders_parent_path)
+
     def _load_parent_folder(self, path):
         self.subfolders_parent_path = path
         self.subfolders_to_process = []
         self.subfolder_all_image_paths = []
 
+        def natural_sort_key(s):
+            return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', s)]
+
         try:
-            self.subfolders_to_process = sorted([d.path for d in os.scandir(path) if d.is_dir()])
-            for sub_path in self.subfolders_to_process:
-                try:
-                    images = [os.path.join(sub_path, f) for f in os.listdir(sub_path) if f.lower().endswith(SUPPORTED_IMAGE_EXTENSIONS)]
+            if self.sub_recursive_var.get():
+                # Recursive search
+                all_dirs_with_images = []
+                for dirpath, _, filenames in os.walk(path):
+                    images = [os.path.join(dirpath, f) for f in filenames if f.lower().endswith(SUPPORTED_IMAGE_EXTENSIONS)]
                     if images:
+                        all_dirs_with_images.append(dirpath)
                         self.subfolder_all_image_paths.extend(images)
-                except OSError:
-                    pass
+                
+                all_dirs_with_images.sort(key=natural_sort_key)
+                self.subfolders_to_process = all_dirs_with_images
+            else:
+                # Non-recursive (immediate subfolders only)
+                subfolders = [d.path for d in os.scandir(path) if d.is_dir()]
+                subfolders.sort(key=natural_sort_key)
+                
+                for sub_path in subfolders:
+                    try:
+                        images = [os.path.join(sub_path, f) for f in os.listdir(sub_path) if f.lower().endswith(SUPPORTED_IMAGE_EXTENSIONS)]
+                        if images:
+                            self.subfolders_to_process.append(sub_path)
+                            self.subfolder_all_image_paths.extend(images)
+                    except OSError:
+                        pass
         except OSError as e:
             messagebox.showerror("Error", f"Error accessing folder: {e}")
             self.subfolders_to_process = []
@@ -556,8 +584,9 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.subfolder_path_label.config(text=self.subfolders_parent_path, foreground="black")
 
         if self.subfolder_all_image_paths:
-            self.status_var.set(f"Parent folder loaded. Found {len(self.subfolder_all_image_paths)} image(s) in {len(self.subfolders_to_process)} subfolder(s).")
-            # Only enable the process button if nothing is currently processing/canceling
+            num_folders = len(self.subfolders_to_process)
+            folder_text = "folders" if num_folders != 1 else "folder"
+            self.status_var.set(f"Parent folder loaded. Found {len(self.subfolder_all_image_paths)} image(s) in {num_folders} sub-{folder_text}.")
             if not (self.processing_thread and self.processing_thread.is_alive()):
                 self.subfolder_process_button.config(state='normal')
         else:
@@ -610,7 +639,9 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
             subfolder_combined_mds = []
             if self.combine_per_subfolder_var.get():
-                for sub_path, md_files in processed_md_by_subfolder.items():
+                # self.subfolders_to_process is already sorted from _load_parent_folder
+                for sub_path in self.subfolders_to_process:
+                    md_files = processed_md_by_subfolder.get(sub_path, [])
                     if not md_files: continue
                     sub_name = os.path.basename(sub_path)
                     output_filename = f"Combined_OCR_{sub_name}.md"
@@ -619,12 +650,8 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                     subfolder_combined_mds.append(output_path)
             
             if self.combine_all_subfolders_var.get() and subfolder_combined_mds:
-                def natural_sort_key_subfolder(path):
-                    subfolder_name = Path(path).parent.name
-                    return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', subfolder_name)]
-
-                subfolder_combined_mds.sort(key=natural_sort_key_subfolder)
-                
+                # The list is already correctly ordered because it was built from the pre-sorted
+                # self.subfolders_to_process list. No need for an additional sort here.
                 all_content = []
                 for md_path in subfolder_combined_mds:
                     try:
