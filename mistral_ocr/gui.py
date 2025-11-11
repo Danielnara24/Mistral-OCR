@@ -4,6 +4,7 @@ Main GUI application for Mistral OCR processing.
 Integrates core logic with a Tkinter interface.
 """
 
+
 import os
 import sys
 import tkinter as tk
