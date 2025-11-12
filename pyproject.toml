@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mistral-ocr-gui"
-version = "0.3.0"
+version = "0.4.0"
 authors = [{ name="Danielnara24" },]
 description = "A graphical user interface for processing images with the Mistral OCR API."
 readme = "README.md"
@@ -20,7 +20,8 @@ classifiers = [
 ]
 dependencies = [
     "mistralai",
-    "tkinterdnd2"
+    "tkinterdnd2",
+    "Pillow"
 ]
 
 [project.urls]

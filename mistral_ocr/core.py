@@ -113,3 +113,63 @@ def process_image_with_ocr(image_path, log_queue, cancel_event):
             else:
                 log_queue.put(('status_update', image_path, 'error'))
                 return None
+            
+def process_pasted_image_ocr(base64_image, log_queue, cancel_event):
+    """
+    Process a base64 encoded image with Mistral OCR API, with retry logic.
+    Returns the extracted markdown content.
+    """
+    log_queue.put(('status_update', 'pasted_image', 'processing'))
+    if cancel_event.is_set():
+        return None
+
+    for attempt in range(1, MAX_RETRIES + 1):
+        if cancel_event.is_set():
+            return None
+
+        try:
+            if not base64_image:
+                raise ValueError("Received empty base64 image.")
+
+            if cancel_event.is_set():
+                return None
+            
+            if Mistral is None:
+                raise ImportError("Mistral AI client is not installed.")
+            if not OCR_API_KEY:
+                raise ValueError("MISTRAL_API_KEY is not set.")
+
+            client = Mistral(api_key=OCR_API_KEY)
+            
+            ocr_response = client.ocr.process(
+                model="mistral-ocr-latest",
+                document={"type": "image_url", "image_url": f"data:image/png;base64,{base64_image}"}
+            )
+            
+            if cancel_event.is_set():
+                return None
+
+            extracted_markdown = ""
+            if hasattr(ocr_response, 'pages') and ocr_response.pages:
+                for page in ocr_response.pages:
+                    if hasattr(page, 'markdown'):
+                        extracted_markdown += page.markdown + "\n\n"
+            elif hasattr(ocr_response, 'text'):
+                extracted_markdown = ocr_response.text
+            else:
+                extracted_markdown = str(ocr_response)
+
+            final_markdown = re.sub(r'!\[.*?\]\(.*?\)', '', extracted_markdown).strip()
+            
+            log_queue.put(('status_update', 'pasted_image', 'success'))
+            return final_markdown # Success, return the content
+
+        except Exception as e:
+            if cancel_event.is_set():
+                return None
+    
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_DELAY_SECONDS)
+            else:
+                log_queue.put(('status_update', 'pasted_image', 'error'))
+                return None

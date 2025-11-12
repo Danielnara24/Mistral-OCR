@@ -4,6 +4,8 @@ Main GUI application for Mistral OCR processing.
 Integrates core logic with a Tkinter interface.
 """
 
+import io
+import base64
 import os
 import sys
 import tkinter as tk
@@ -22,13 +24,20 @@ except ImportError:
     TkinterDnD = None
 
 try:
+    from PIL import ImageGrab, Image
+except ImportError:
+    ImageGrab = None
+    Image = None
+
+try:
     from mistralai import Mistral
 except ImportError:
     Mistral = None
 
 # --- Local Package Imports ---
 from .core import (
-    process_image_with_ocr, 
+    process_image_with_ocr,
+    process_pasted_image_ocr,
     OCR_API_KEY, 
     MAX_WORKERS, 
     SUPPORTED_IMAGE_EXTENSIONS,
@@ -62,6 +71,7 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
         # --- Individual Images State ---
         self.image_paths = []
+        self.pasted_image = None
         self.ind_progress_bar = None
         self.ind_path_map = {}
         self.ind_start_time = 0
@@ -97,6 +107,7 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.create_widgets()
         if TkinterDnD:
             self.setup_drag_and_drop()
+        self.bind_all('<Control-v>', self.handle_paste)
         self.process_log_queue()
 
     def check_dependencies(self):
@@ -106,6 +117,10 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             sys.exit(1)
         if TkinterDnD is None:
             messagebox.showerror("Dependency Error", "The 'tkinterdnd2' package is not installed.\nPlease install it using: pip install tkinterdnd2")
+            self.destroy()
+            sys.exit(1)
+        if ImageGrab is None:
+            messagebox.showerror("Dependency Error", "The 'Pillow' package is not installed.\nPlease install it using: pip install Pillow")
             self.destroy()
             sys.exit(1)
         if not OCR_API_KEY:
@@ -183,7 +198,7 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
     def create_tab1_widgets(self):
         desc_label = ttk.Label(
             self.tab1,
-            text="Process one or more individual image files. Drag and drop files onto the window or use the button.\nEach image will produce a separate markdown file in its original directory.",
+            text="Process one or more individual image files. Drag and drop files onto the window or select them.\nEach image will produce a separate markdown file in its original directory.",
             wraplength=770,
             justify=tk.LEFT
         )
@@ -380,6 +395,7 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self.combine_all_subfolders_var.set(False)
 
     def _load_individual_images(self, paths):
+        self.pasted_image = None
         self.image_paths = list(paths)
         self.file_listbox.delete(0, tk.END)
         for path in self.image_paths:
@@ -399,6 +415,10 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self._load_individual_images(paths)
 
     def start_individual_processing(self):
+        if self.pasted_image:
+            self.start_pasted_image_processing()
+            return
+
         if not self.image_paths:
             messagebox.showwarning("No Files", "Please select images to process first.")
             return
@@ -417,6 +437,81 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
         self.processing_thread = threading.Thread(target=self.run_individual_processing_logic, daemon=True)
         self.processing_thread.start()
+
+    def handle_paste(self, event=None):
+        # Only handle paste in the individual images tab and when not processing
+        if self.notebook.index(self.notebook.select()) != 0 or (self.processing_thread and self.processing_thread.is_alive()):
+            return
+
+        try:
+            pasted_image = ImageGrab.grabclipboard()
+            if isinstance(pasted_image, Image.Image):
+                self.pasted_image = pasted_image
+                self.image_paths = [] # Clear file paths
+                self.file_listbox.delete(0, tk.END)
+                self.file_listbox.insert(tk.END, "[Pasted Image from Clipboard]")
+                self.process_button.config(state='normal')
+                self.ind_progress_bar.setup_grid(1)
+                self.status_var.set("Image pasted from clipboard. Ready to process.")
+        except Exception:
+            # Clipboard does not contain a valid image
+            self.status_var.set("Paste failed: Clipboard does not contain an image.")
+
+    def start_pasted_image_processing(self):
+        self.active_tab_index = 0
+        self.set_ui_state(is_processing=True, active_tab_index=self.active_tab_index)
+        
+        self.ind_path_map = {"pasted_image": 0} # Dummy map
+        self.ind_progress_bar.setup_grid(1)
+        
+        self.cancel_event.clear()
+        
+        self.ind_start_time = time.time()
+        self.ind_elapsed_time_var.set("0.0s")
+        self.update_individual_stopwatch()
+
+        self.processing_thread = threading.Thread(target=self.run_pasted_image_processing_logic, daemon=True)
+        self.processing_thread.start()
+        
+    def run_pasted_image_processing_logic(self):
+        try:
+            # Convert PIL image to base64
+            buffered = io.BytesIO()
+            self.pasted_image.save(buffered, format="PNG")
+            base64_image = base64.b64encode(buffered.getvalue()).decode('utf-8')
+            
+            markdown_content = process_pasted_image_ocr(base64_image, self.log_queue, self.cancel_event)
+
+            if markdown_content is not None and not self.cancel_event.is_set():
+                self.after(0, self.save_pasted_image_result, markdown_content)
+
+        finally:
+            self.after(0, self.set_ui_state, False, self.active_tab_index)
+            self.after(0, self.reset_pasted_image_state)
+
+    def save_pasted_image_result(self, markdown_content):
+        if not markdown_content:
+            return
+            
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".md",
+            filetypes=[("Markdown files", "*.md"), ("All files", "*.*")],
+            title="Save OCR Output"
+        )
+        if file_path:
+            try:
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(markdown_content)
+                self.status_var.set(f"Successfully saved to {os.path.basename(file_path)}")
+            except Exception as e:
+                messagebox.showerror("Save Error", f"Failed to save file: {e}")
+                
+    def reset_pasted_image_state(self):
+        self.pasted_image = None
+        if self.file_listbox.get(0) == "[Pasted Image from Clipboard]":
+            self.file_listbox.delete(0, tk.END)
+        self.process_button.config(state='disabled')
+        self.ind_progress_bar.clear()
         
     def run_individual_processing_logic(self):
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS)
@@ -800,6 +895,8 @@ class OcrApp(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                         progress_bar, path_map = self.sub_progress_bar, self.sub_path_map
 
                     if progress_bar and path_map and path in path_map:
+                        if path == 'pasted_image' and 'pasted_image' not in path_map:
+                            return
                         index = path_map[path]
                         color_map = {'processing': PROCESSING_COLOR, 'success': PROCESSED_COLOR, 'error': ERROR_COLOR}
                         color = color_map.get(status, 'white')
