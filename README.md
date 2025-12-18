@@ -89,6 +89,8 @@ mistral-ocr
 
 The graphical user interface will appear, and you can start processing your images.
 
+<img width="802" height="679" alt="Image" src="https://github.com/user-attachments/assets/01db15f4-6b35-404f-81e7-4f180f0754b3" />
+
 ### How It Works
 
 1.  **Select a Tab**:
